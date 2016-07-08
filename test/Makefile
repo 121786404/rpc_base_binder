@@ -2,14 +2,18 @@ CC		:= gcc
 # CC		:= arm-linux-gnueabihf-gcc
 
 
-APPS = test
+APPS = service_manager test test_server
 
 all : $(APPS)
 
-
-test : cal.o binder.o test.o
+service_manager : service_manager.o binder.o
 	$(CC) -o $@ $^
 
+test : test.o binder.o
+	$(CC) -o $@ $^
+
+test_server : test_server.o binder.o
+	$(CC) -o $@ $^
 
 %.o : %.c
 	$(CC) -I.. -c -o $@ $<

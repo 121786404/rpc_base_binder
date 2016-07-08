@@ -1,4 +1,12 @@
 # Object files
 *.o
 *.ko
+*.cmd
+*.tmp_versions
+Module.symvers
+modules.order
+*.mod.c
+deps.h
+test_server
+test
 si/*

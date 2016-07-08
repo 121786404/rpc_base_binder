@@ -5,4 +5,4 @@
 
 sudo test/service_manager &
 sudo test/test_server &
-sudo test/test_client
+sudo test/test

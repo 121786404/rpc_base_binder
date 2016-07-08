@@ -381,6 +381,8 @@ void binder_loop(struct binder_state *bs, binder_handler func)
 
     readbuf[0] = BC_ENTER_LOOPER;
     binder_write(bs, readbuf, sizeof(uint32_t));
+    
+    ALOGI("into %s %d\n",__FUNCTION__,__LINE__);
 
     for (;;) {
         bwr.read_size = sizeof(readbuf);
