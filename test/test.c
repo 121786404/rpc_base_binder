@@ -1,3 +1,6 @@
+/* Copyright 2008 The Android Open Source Project
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -5,19 +8,14 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
+
+
 #include "binder.h"
 #include "test_server.h"
 
 
-//#include "MI_Count.h"
-#define ALOGI(x...) fprintf(stderr, "test: " x)
-#define ALOGE(x...) fprintf(stderr, "test: " x)
 
-
-static struct binder_state *g_bs;
-static uint32_t g_handle;
-
-static uint32_t svcmgr_lookup(struct binder_state *bs, uint32_t target, const char *name)
+uint32_t svcmgr_lookup(struct binder_state *bs, uint32_t target, const char *name)
 {
     uint32_t handle;
     unsigned iodata[512/4];
@@ -42,20 +40,127 @@ static uint32_t svcmgr_lookup(struct binder_state *bs, uint32_t target, const ch
 }
 
 
-int MI_Count_Init(int chn)
+struct binder_state *g_bs;
+uint32_t g_hello_handle;
+uint32_t g_goodbye_handle;
+
+void sayhello(void)
 {
-    struct binder_state* bs;  
-    uint32_t handle;
+    unsigned iodata[512/4];
+    struct binder_io msg, reply;
+
+	/* 构造binder_io */
+    bio_init(&msg, iodata, sizeof(iodata), 4);
+    bio_put_uint32(&msg, 0);  // strict mode header
+
+	/* 放入参数 */
+
+	/* 调用binder_call */
+    if (binder_call(g_bs, &msg, &reply, g_hello_handle, HELLO_SVR_CMD_SAYHELLO))
+        return ;
+
+	/* 从reply中解析出返回值 */
+
+    binder_done(g_bs, &msg, &reply);
+
+}
+
+int sayhello_to(char *name)
+{
+	unsigned iodata[512/4];
+	struct binder_io msg, reply;
+	int ret;
+
+	/* 构造binder_io */
+	bio_init(&msg, iodata, sizeof(iodata), 4);
+	bio_put_uint32(&msg, 0);  // strict mode header
+
+	/* 放入参数 */
+    bio_put_string16_x(&msg, name);
+
+	/* 调用binder_call */
+	if (binder_call(g_bs, &msg, &reply, g_hello_handle, HELLO_SVR_CMD_SAYHELLO_TO))
+		return 0;
+
+	/* 从reply中解析出返回值 */
+	ret = bio_get_uint32(&reply);
+
+	binder_done(g_bs, &msg, &reply);
+
+	return ret;
+
+}
+
+
+void saygoodbye(void)
+{
+    unsigned iodata[512/4];
+    struct binder_io msg, reply;
+
+	/* 构造binder_io */
+    bio_init(&msg, iodata, sizeof(iodata), 4);
+    bio_put_uint32(&msg, 0);  // strict mode header
+
+	/* 放入参数 */
+
+	/* 调用binder_call */
+    if (binder_call(g_bs, &msg, &reply, g_goodbye_handle, GOODBYE_SVR_CMD_SAYGOODBYE))
+        return ;
+
+	/* 从reply中解析出返回值 */
+
+    binder_done(g_bs, &msg, &reply);
+
+}
+
+int saygoodbye_to(char *name)
+{
+	unsigned iodata[512/4];
+	struct binder_io msg, reply;
+	int ret;
+
+	/* 构造binder_io */
+	bio_init(&msg, iodata, sizeof(iodata), 4);
+	bio_put_uint32(&msg, 0);  // strict mode header
+
+	/* 放入参数 */
+    bio_put_string16_x(&msg, name);
+
+	/* 调用binder_call */
+	if (binder_call(g_bs, &msg, &reply, g_goodbye_handle, GOODBYE_SVR_CMD_SAYGOODBYE_TO))
+		return 0;
+
+	/* 从reply中解析出返回值 */
+	ret = bio_get_uint32(&reply);
+
+	binder_done(g_bs, &msg, &reply);
+
+	return ret;
+
+}
+
+
+
+
+
+/* ./test_client hello
+ * ./test_client hello <name>
+ */
+
+int main(int argc, char **argv)
+{
+    int fd;
+    struct binder_state *bs;
     uint32_t svcmgr = BINDER_SERVICE_MANAGER;
-    char cal_str[5] = {0};
+    uint32_t handle;
+	int ret;
 
-    if(g_handle)
-    {
-        ALOGI("chn:[%d] has inited\n",chn);
-        return 0;
-    }
-
-    ALOGI("%s %d chn:%d\n",__FUNCTION__,__LINE__,chn);
+	if (argc < 2){
+        fprintf(stderr, "Usage:\n");
+        fprintf(stderr, "%s <hello|goodbye>\n", argv[0]);
+        fprintf(stderr, "%s <hello|goodbye> <name>\n", argv[0]);
+        return -1;
+	}
 
     bs = binder_open(128*1024);
     if (!bs) {
@@ -66,196 +171,42 @@ int MI_Count_Init(int chn)
 
 
 	/* get service */
-    sprintf(cal_str,"cal_%d",chn);
-	handle = svcmgr_lookup(g_bs, svcmgr,cal_str);
+	handle = svcmgr_lookup(bs, svcmgr, "goodbye");
 	if (!handle) {
-        fprintf(stderr, "failed to get cal_1 service\n");
+        fprintf(stderr, "failed to get goodbye service\n");
         return -1;
 	}
-	g_handle = handle;
+	g_goodbye_handle = handle;
+	fprintf(stderr, "Handle for goodbye service = %d\n", g_goodbye_handle);
 
-	//fprintf(stderr, "Handle for cal_1 service = %d\n", g_handle);
-}
-
-
-int MI_Count_Enable(int chn)
-{
-	unsigned iodata[512/4];
-	struct binder_io msg, reply;
-	int ret;
-
-    if(g_handle == 0)
-    {
-        MI_Count_Init(chn);
-        if(g_handle == 0)
-            return -1;
-    }
-
-    ALOGI("%s %d chn:%d\n",__FUNCTION__,__LINE__,chn);
-
-
-	/* 构造binder_io */
-	bio_init(&msg, iodata, sizeof(iodata), 4);
-	bio_put_uint32(&msg, 0);  // strict mode header
-
-	/* 放入参数 */
-    bio_put_uint32(&msg, chn);
-
-	/* 调用binder_call */
-	if (binder_call(g_bs, &msg, &reply, g_handle, COUNT_SVR_CMD_ENABLE))
-		return 0;
-
-	/* 从reply中解析出返回值 */
-	ret = bio_get_uint32(&reply);
-
-	binder_done(g_bs, &msg, &reply);
-
-	return ret;
-}
-
-
-int MI_Count_Set(int chn,int num)
-{
-	unsigned iodata[512/4];
-	struct binder_io msg, reply;
-	int ret;   
-
-    if(g_handle == 0)
+	handle = svcmgr_lookup(bs, svcmgr, "hello");
+	if (!handle) {
+        fprintf(stderr, "failed to get hello service\n");
         return -1;
+	}
+	g_hello_handle = handle;
+	fprintf(stderr, "Handle for hello service = %d\n", g_hello_handle);
 
-    ALOGI("%s %d chn:%d num:%d\n",__FUNCTION__,__LINE__,chn,num);
+	/* send data to server */
+	if (!strcmp(argv[1], "hello"))
+	{
+		if (argc == 2) {
+			sayhello();
+		} else if (argc == 3) {
+			ret = sayhello_to(argv[2]);
+	        fprintf(stderr, "get ret of sayhello_to = %d\n", ret);
+		}
+	} else if (!strcmp(argv[1], "goodbye"))
+	{
+		if (argc == 2) {
+			saygoodbye();
+		} else if (argc == 3) {
+			ret = saygoodbye_to(argv[2]);
+	        fprintf(stderr, "get ret of sayhello_to = %d\n", ret);
+		}
+	}
 
-    /* 构造binder_io */
-    bio_init(&msg, iodata, sizeof(iodata), 4);
-    bio_put_uint32(&msg, 0);  // strict mode header
+	binder_release(bs, handle);
 
-    /* 放入参数 */
-    bio_put_uint32(&msg, chn);
-    bio_put_uint32(&msg, num);
-
-    /* 调用binder_call */
-    if (binder_call(g_bs, &msg, &reply, g_handle, COUNT_SVR_CMD_GET))
-        return 0;
-
-    /* 从reply中解析出返回值 */
-    ret = bio_get_uint32(&reply);
-
-    binder_done(g_bs, &msg, &reply);
-
-    return ret;
-}
-
-int MI_Count_Add(int chn,int num)
-{
-	unsigned iodata[512/4];
-	struct binder_io msg, reply;
-	int ret;   
-
-    if(g_handle == 0)
-        return -1;
-
-    ALOGI("%s %d chn:%d num:%d\n",__FUNCTION__,__LINE__,chn,num);
-    /* 构造binder_io */
-    bio_init(&msg, iodata, sizeof(iodata), 4);
-    bio_put_uint32(&msg, 0);  // strict mode header
-
-    /* 放入参数 */
-    bio_put_uint32(&msg, chn);
-    bio_put_uint32(&msg, num);
-
-    /* 调用binder_call */
-    if (binder_call(g_bs, &msg, &reply, g_handle, COUNT_SVR_CMD_ADD))
-        return 0;
-
-    /* 从reply中解析出返回值 */
-    ret = bio_get_uint32(&reply);
-
-    binder_done(g_bs, &msg, &reply);
-
-    return ret;
-}
-
-int MI_Count_Sub(int chn,int num)
-{
-    unsigned iodata[512/4];
-    struct binder_io msg, reply;
-    int ret;   
-
-    if(g_handle == 0)
-        return -1;
-
-    ALOGI("%s %d chn:%d num:%d\n",__FUNCTION__,__LINE__,chn,num);
-
-    /* 构造binder_io */
-    bio_init(&msg, iodata, sizeof(iodata), 4);
-    bio_put_uint32(&msg, 0);  // strict mode header
-
-    /* 放入参数 */
-    bio_put_uint32(&msg, chn);
-    bio_put_uint32(&msg, num);
-
-    /* 调用binder_call */
-    if (binder_call(g_bs, &msg, &reply, g_handle, COUNT_SVR_CMD_SUB))
-        return 0;
-
-    /* 从reply中解析出返回值 */
-    ret = bio_get_uint32(&reply);
-
-    binder_done(g_bs, &msg, &reply);
-    
-    return ret;
-}
-
-int MI_Count_Get(int chn,int* pNum)
-{
-    unsigned iodata[512/4];
-    struct binder_io msg, reply;
-    int ret;   
-
-    if(g_handle == 0)
-        return -1;
-
-    ALOGI("%s %d chn:%d \n",__FUNCTION__,__LINE__,chn);
-
-    /* 构造binder_io */
-    bio_init(&msg, iodata, sizeof(iodata), 4);
-    bio_put_uint32(&msg, 0);  // strict mode header
-
-    /* 放入参数 */
-    bio_put_uint32(&msg, chn);
-    bio_put_uint32(&msg, (uint32_t)pNum);
-
-    /* 调用binder_call */
-    if (binder_call(g_bs, &msg, &reply, g_handle, COUNT_SVR_CMD_GET))
-        return 0;
-
-    /* 从reply中解析出返回值 */
-    ret = bio_get_uint32(&reply);
-
-    binder_done(g_bs, &msg, &reply);
-    
-    return ret;
-}
-
-
-int main()
-{
-	int ret;
-	int num;
-    
-    int chn = 2;//rand()%3;
-
-    MI_Count_Enable(chn);
-    
-    num = rand()%100;
-    MI_Count_Add(chn,num);
-    MI_Count_Get(chn,&ret);
-	ALOGI("chn:[%d] num = %d\n", chn,num);
-
-    num = rand()%100;
-    MI_Count_Sub(chn,num);
-    MI_Count_Get(chn,&ret);
-	ALOGI("chn:[%d] num = %d\n", chn,num);
-
-	return 0;
+    return 0;
 }
