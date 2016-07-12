@@ -17,7 +17,7 @@ typedef u32 MAE_Ret; ///< type for MAE return values
 typedef u16 MAE_WChar; ///< type for MAE defined wide characters
 typedef u32 MAE_EventId; ///< type for events used in the communication of IHandler objects
 
-						 /// type aliases
+                         /// type aliases
 typedef MAE_IId MAEIId_t;
 typedef MAE_ClsId MAEClsId_t;
 typedef MAE_Ret MAERet_t;
@@ -26,9 +26,9 @@ typedef MAE_EventId MAEEvent_t;
 
 enum
 {
-	MAE_RET_SUCCESS = 0, ///< operation completed successfully
-	MAE_RET_BAD_PARAM = 1, ///< invalid input parameters
-	MAE_RET_FAILED = 2, ///< WHAT? every code here is failed
+    MAE_RET_SUCCESS = 0, ///< operation completed successfully
+    MAE_RET_BAD_PARAM = 1, ///< invalid input parameters
+    MAE_RET_FAILED = 2, ///< WHAT? every code here is failed
 };
 
 #define TRUE  1
